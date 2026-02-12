@@ -26,6 +26,16 @@ Bản dịch tiếng Việt này được biên dịch và duy trì bởi cộng
 - Cung cấp tài liệu tham khảo dễ tiếp cận cho các nhà phát triển và tổ chức giáo dục
 - Thúc đẩy việc áp dụng các tiêu chuẩn quốc tế trong phát triển hệ thống học tập
 
+## OpenAPI API Docs
+
+Repo đã có sẵn project OpenAPI trong thư mục `openapi/` để dựng API docs dựa trên chuẩn xAPI:
+
+1. `cd openapi`
+2. `pnpm install` (hoặc `bun install`)
+3. `pnpm lint` (hoặc `bun run lint`)
+4. `pnpm build` (hoặc `bun run build`) để xuất `openapi/dist/index.html`
+5. `pnpm preview` (hoặc `bun run preview`) để xem docs local tại cổng `8080`
+
 ## Đóng góp
 
 Mọi đóng góp, báo lỗi, hoặc đề xuất cải thiện bản dịch đều được hoan nghênh. Vui lòng:

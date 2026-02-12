@@ -1,0 +1,2552 @@
+openapi: 3.1.0
+info:
+  title: Experience API (xAPI) REST API - OpenAPI Draft
+  version: 1.0.2
+  description: |
+    OpenAPI draft to generate API docs from the Vietnamese xAPI specification in `xAPI_vi.md`.
+
+    Scope:
+    - Covers the mandatory xAPI endpoints from section 7 and Appendix F.
+    - Includes request headers, query parameters, and core response shapes for implementation guidance.
+    - Uses practical schemas (not full normative JSON Schema for every xAPI object).
+
+    Source mapping:
+    - Runtime communication and headers: section 6
+    - REST APIs: section 7
+    - Endpoint list: Appendix F
+servers:
+  - url: https://example.com/xAPI
+    description: Example xAPI base endpoint
+security:
+  - basicAuth: []
+  - authorizationHeader: []
+tags:
+  - name: statements
+    description: Statement API
+  - name: state
+    description: State API
+  - name: activity-profile
+    description: Activity Profile API
+  - name: agent-profile
+    description: Agent Profile API
+  - name: activity
+    description: Activity object endpoint
+  - name: agent
+    description: Agent person endpoint
+  - name: about
+    description: LRS about endpoint
+  - name: oauth
+    description: OAuth 1.0 endpoints (when implemented)
+paths:
+  /statements:
+    parameters:
+      - $ref: '#/components/parameters/XExperienceApiVersion'
+    put:
+      tags: [statements]
+      summary: Store one Statement with a client-supplied Statement ID
+      operationId: putStatement
+      parameters:
+        - $ref: '#/components/parameters/StatementId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatementRequest'
+            examples:
+              simple:
+                $ref: '#/components/examples/StatementRequestSimple'
+      responses:
+        '204':
+          description: Statement accepted
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/RequestTooLarge'
+    post:
+      tags: [statements]
+      summary: Store one Statement or a batch of Statements
+      operationId: postStatements
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/StatementRequest'
+                - type: array
+                  minItems: 1
+                  items:
+                    $ref: '#/components/schemas/StatementRequest'
+            examples:
+              single:
+                $ref: '#/components/examples/StatementRequestSimpleNoId'
+              batch:
+                $ref: '#/components/examples/StatementRequestBatch'
+      responses:
+        '200':
+          description: Stored Statement IDs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  format: uuid
+              examples:
+                ids:
+                  $ref: '#/components/examples/StatementIdsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/RequestTooLarge'
+    get:
+      tags: [statements]
+      summary: Retrieve one Statement or a StatementResult page
+      operationId: getStatements
+      parameters:
+        - $ref: '#/components/parameters/StatementIdOptional'
+        - $ref: '#/components/parameters/VoidedStatementId'
+        - $ref: '#/components/parameters/AgentQueryOptional'
+        - $ref: '#/components/parameters/VerbId'
+        - $ref: '#/components/parameters/ActivityIdOptional'
+        - $ref: '#/components/parameters/Registration'
+        - $ref: '#/components/parameters/RelatedActivities'
+        - $ref: '#/components/parameters/RelatedAgents'
+        - $ref: '#/components/parameters/Since'
+        - $ref: '#/components/parameters/Until'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Format'
+        - $ref: '#/components/parameters/Attachments'
+        - $ref: '#/components/parameters/Ascending'
+        - $ref: '#/components/parameters/AcceptLanguage'
+      responses:
+        '200':
+          description: Statement or StatementResult (shape depends on `format`)
+          headers:
+            X-Experience-API-Consistent-Through:
+              description: Point in time through which Statements are reliably queryable
+              required: true
+              schema:
+                type: string
+                format: date-time
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/StatementResponseExact'
+                  - $ref: '#/components/schemas/StatementResponseCanonical'
+                  - $ref: '#/components/schemas/StatementResponseIds'
+                  - $ref: '#/components/schemas/StatementResultExact'
+                  - $ref: '#/components/schemas/StatementResultCanonical'
+                  - $ref: '#/components/schemas/StatementResultIds'
+              examples:
+                exactSingle:
+                  $ref: '#/components/examples/StatementResponseSimple'
+                canonicalSingle:
+                  $ref: '#/components/examples/StatementResponseCanonical'
+                idsSingle:
+                  $ref: '#/components/examples/StatementResponseIds'
+                exactPage:
+                  $ref: '#/components/examples/StatementResultPage'
+                canonicalPage:
+                  $ref: '#/components/examples/StatementResultPageCanonical'
+                idsPage:
+                  $ref: '#/components/examples/StatementResultPageIds'
+            multipart/mixed:
+              schema:
+                type: string
+                description: "Multipart payload when attachments=true"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    head:
+      tags: [statements]
+      summary: HEAD equivalent of GET /statements
+      description: Returns the same headers as GET /statements without a response body.
+      operationId: headStatements
+      parameters:
+        - $ref: '#/components/parameters/StatementIdOptional'
+        - $ref: '#/components/parameters/VoidedStatementId'
+        - $ref: '#/components/parameters/AgentQueryOptional'
+        - $ref: '#/components/parameters/VerbId'
+        - $ref: '#/components/parameters/ActivityIdOptional'
+        - $ref: '#/components/parameters/Registration'
+        - $ref: '#/components/parameters/RelatedActivities'
+        - $ref: '#/components/parameters/RelatedAgents'
+        - $ref: '#/components/parameters/Since'
+        - $ref: '#/components/parameters/Until'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Format'
+        - $ref: '#/components/parameters/Attachments'
+        - $ref: '#/components/parameters/Ascending'
+        - $ref: '#/components/parameters/AcceptLanguage'
+      responses:
+        '200':
+          description: Headers returned, no body
+          headers:
+            X-Experience-API-Consistent-Through:
+              schema:
+                type: string
+                format: date-time
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /activities/state:
+    parameters:
+      - $ref: '#/components/parameters/XExperienceApiVersion'
+      - $ref: '#/components/parameters/ActivityIdRequired'
+      - $ref: '#/components/parameters/AgentQueryRequired'
+      - $ref: '#/components/parameters/Registration'
+      - $ref: '#/components/parameters/StateIdOptional'
+      - $ref: '#/components/parameters/Since'
+    get:
+      tags: [state]
+      summary: Get one state document or list of state IDs
+      operationId: getState
+      responses:
+        '200':
+          description: "State document content (if stateId) or ID list"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/DocumentContent'
+                  - $ref: '#/components/schemas/IdList'
+              examples:
+                document:
+                  $ref: '#/components/examples/StateDocumentJson'
+                idList:
+                  $ref: '#/components/examples/StateIdList'
+            text/plain:
+              schema:
+                type: string
+              example: "bookmark=page-42"
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [state]
+      summary: Create or replace a state document
+      operationId: putState
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentContent'
+            examples:
+              state:
+                $ref: '#/components/examples/StateDocumentJson'
+          text/plain:
+            schema:
+              type: string
+            example: "bookmark=page-42"
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '204':
+          description: Stored
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '413':
+          $ref: '#/components/responses/RequestTooLarge'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+    post:
+      tags: [state]
+      summary: Merge or create a state document
+      operationId: postState
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentContent'
+            examples:
+              statePatch:
+                $ref: '#/components/examples/StateDocumentPatch'
+          text/plain:
+            schema:
+              type: string
+            example: "bookmark=page-43"
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '204':
+          description: Stored
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '413':
+          $ref: '#/components/responses/RequestTooLarge'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+    delete:
+      tags: [state]
+      summary: Delete one state document or all state docs in context
+      operationId: deleteState
+      responses:
+        '204':
+          description: Deleted
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+    head:
+      tags: [state]
+      summary: HEAD equivalent of GET /activities/state
+      operationId: headState
+      responses:
+        '200':
+          description: Headers returned, no body
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /activities/profile:
+    parameters:
+      - $ref: '#/components/parameters/XExperienceApiVersion'
+      - $ref: '#/components/parameters/ActivityIdRequired'
+      - $ref: '#/components/parameters/ProfileIdOptional'
+      - $ref: '#/components/parameters/Since'
+    get:
+      tags: [activity-profile]
+      summary: Get one activity profile document or list profile IDs
+      operationId: getActivityProfile
+      responses:
+        '200':
+          description: "Activity profile content (if profileId) or profile ID list"
+          headers:
+            ETag:
+              schema:
+                type: string
+              description: Returned on document GET responses
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/DocumentContent'
+                  - $ref: '#/components/schemas/IdList'
+              examples:
+                document:
+                  $ref: '#/components/examples/ActivityProfileDocument'
+                idList:
+                  $ref: '#/components/examples/ActivityProfileIdList'
+            text/plain:
+              schema:
+                type: string
+              example: "difficulty=intermediate"
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [activity-profile]
+      summary: Create or replace an activity profile document
+      description: "For existing docs, send If-Match or If-None-Match per xAPI concurrency rules."
+      operationId: putActivityProfile
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+        - $ref: '#/components/parameters/IfNoneMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentContent'
+            examples:
+              profile:
+                $ref: '#/components/examples/ActivityProfileDocument'
+          text/plain:
+            schema:
+              type: string
+            example: "difficulty=intermediate"
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '204':
+          description: Stored
+          headers:
+            ETag:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+    post:
+      tags: [activity-profile]
+      summary: Merge or create an activity profile document
+      description: "If-Match or If-None-Match is recommended for concurrency control."
+      operationId: postActivityProfile
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+        - $ref: '#/components/parameters/IfNoneMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentContent'
+            examples:
+              profilePatch:
+                $ref: '#/components/examples/ActivityProfilePatch'
+          text/plain:
+            schema:
+              type: string
+            example: "difficulty=advanced"
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '204':
+          description: Stored
+          headers:
+            ETag:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+    delete:
+      tags: [activity-profile]
+      summary: Delete an activity profile document
+      description: "If-Match is recommended for concurrency control."
+      operationId: deleteActivityProfile
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '204':
+          description: Deleted
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+    head:
+      tags: [activity-profile]
+      summary: HEAD equivalent of GET /activities/profile
+      operationId: headActivityProfile
+      responses:
+        '200':
+          description: Headers returned, no body
+          headers:
+            ETag:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /agents/profile:
+    parameters:
+      - $ref: '#/components/parameters/XExperienceApiVersion'
+      - $ref: '#/components/parameters/AgentQueryRequired'
+      - $ref: '#/components/parameters/ProfileIdOptional'
+      - $ref: '#/components/parameters/Since'
+    get:
+      tags: [agent-profile]
+      summary: Get one agent profile document or list profile IDs
+      operationId: getAgentProfile
+      responses:
+        '200':
+          description: "Agent profile content (if profileId) or profile ID list"
+          headers:
+            ETag:
+              schema:
+                type: string
+              description: Returned on document GET responses
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/DocumentContent'
+                  - $ref: '#/components/schemas/IdList'
+              examples:
+                document:
+                  $ref: '#/components/examples/AgentProfileDocument'
+                idList:
+                  $ref: '#/components/examples/AgentProfileIdList'
+            text/plain:
+              schema:
+                type: string
+              example: "preferredLanguage=vi-VN"
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [agent-profile]
+      summary: Create or replace an agent profile document
+      description: "For existing docs, send If-Match or If-None-Match per xAPI concurrency rules."
+      operationId: putAgentProfile
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+        - $ref: '#/components/parameters/IfNoneMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentContent'
+            examples:
+              profile:
+                $ref: '#/components/examples/AgentProfileDocument'
+          text/plain:
+            schema:
+              type: string
+            example: "preferredLanguage=vi-VN"
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '204':
+          description: Stored
+          headers:
+            ETag:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+    post:
+      tags: [agent-profile]
+      summary: Merge or create an agent profile document
+      description: "If-Match or If-None-Match is recommended for concurrency control."
+      operationId: postAgentProfile
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+        - $ref: '#/components/parameters/IfNoneMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentContent'
+            examples:
+              profilePatch:
+                $ref: '#/components/examples/AgentProfilePatch'
+          text/plain:
+            schema:
+              type: string
+            example: "preferredLanguage=en-US"
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '204':
+          description: Stored
+          headers:
+            ETag:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+    delete:
+      tags: [agent-profile]
+      summary: Delete an agent profile document
+      description: "If-Match is recommended for concurrency control."
+      operationId: deleteAgentProfile
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '204':
+          description: Deleted
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+    head:
+      tags: [agent-profile]
+      summary: HEAD equivalent of GET /agents/profile
+      operationId: headAgentProfile
+      responses:
+        '200':
+          description: Headers returned, no body
+          headers:
+            ETag:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /activities:
+    parameters:
+      - $ref: '#/components/parameters/XExperienceApiVersion'
+      - $ref: '#/components/parameters/ActivityIdRequired'
+    get:
+      tags: [activity]
+      summary: Get a full Activity object
+      operationId: getActivity
+      responses:
+        '200':
+          description: Activity object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Activity'
+              examples:
+                activity:
+                  $ref: '#/components/examples/ActivityObjectResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    head:
+      tags: [activity]
+      summary: HEAD equivalent of GET /activities
+      operationId: headActivity
+      responses:
+        '200':
+          description: Headers returned, no body
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /agents:
+    parameters:
+      - $ref: '#/components/parameters/XExperienceApiVersion'
+      - $ref: '#/components/parameters/AgentQueryRequired'
+    get:
+      tags: [agent]
+      summary: Get Person object for an Agent
+      operationId: getAgentPerson
+      responses:
+        '200':
+          description: Person object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Person'
+              examples:
+                person:
+                  $ref: '#/components/examples/PersonResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    head:
+      tags: [agent]
+      summary: HEAD equivalent of GET /agents
+      operationId: headAgent
+      responses:
+        '200':
+          description: Headers returned, no body
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /about:
+    parameters:
+      - $ref: '#/components/parameters/XExperienceApiVersion'
+    get:
+      tags: [about]
+      summary: Get supported xAPI versions for this LRS
+      operationId: getAbout
+      security: []
+      responses:
+        '200':
+          description: About resource
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/About'
+              examples:
+                about:
+                  $ref: '#/components/examples/AboutResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    head:
+      tags: [about]
+      summary: HEAD equivalent of GET /about
+      operationId: headAbout
+      security: []
+      responses:
+        '200':
+          description: Headers returned, no body
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /OAuth/initiate:
+    post:
+      tags: [oauth]
+      summary: OAuth Temporary Credential Request
+      operationId: oauthInitiate
+      security: []
+      requestBody:
+        required: false
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                oauth_callback:
+                  type: string
+                consumer_name:
+                  type: string
+                scope:
+                  type: string
+            example:
+              oauth_callback: https://client.example.com/oauth/callback
+              consumer_name: xapi-reporting-client
+              scope: statements/read
+      responses:
+        '200':
+          description: OAuth temporary credential response
+          content:
+            application/x-www-form-urlencoded:
+              schema:
+                type: string
+              example: oauth_token=temp-token&oauth_token_secret=temp-secret&oauth_callback_confirmed=true
+
+  /OAuth/authorize:
+    get:
+      tags: [oauth]
+      summary: OAuth Resource Owner Authorization
+      operationId: oauthAuthorize
+      security: []
+      parameters:
+        - name: oauth_token
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Authorization page or redirect
+
+  /OAuth/token:
+    post:
+      tags: [oauth]
+      summary: OAuth Token Request
+      operationId: oauthToken
+      security: []
+      requestBody:
+        required: false
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                oauth_token:
+                  type: string
+                oauth_verifier:
+                  type: string
+            example:
+              oauth_token: temp-token
+              oauth_verifier: verifier-value
+      responses:
+        '200':
+          description: OAuth access token response
+          content:
+            application/x-www-form-urlencoded:
+              schema:
+                type: string
+              example: oauth_token=access-token&oauth_token_secret=access-secret
+
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+    authorizationHeader:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: |
+        Use this for OAuth 1.0 signed Authorization header requests.
+        HTTP Basic auth is modeled separately as `basicAuth`.
+
+  headers:
+    XExperienceApiVersion:
+      description: xAPI version header.
+      schema:
+        type: string
+        pattern: '^1\\.0\\.\\d+$'
+      example: '1.0.3'
+
+  parameters:
+    XExperienceApiVersion:
+      name: X-Experience-API-Version
+      in: header
+      required: true
+      description: xAPI version header required by section 6.2
+      schema:
+        type: string
+        pattern: '^1\\.0\\.\\d+$'
+      example: '1.0.3'
+
+    AcceptLanguage:
+      name: Accept-Language
+      in: header
+      required: false
+      schema:
+        type: string
+      description: Used by canonical statement format language filtering.
+      example: en-US,en;q=0.8
+
+    IfMatch:
+      name: If-Match
+      in: header
+      required: false
+      schema:
+        type: string
+      description: ETag precondition header for optimistic concurrency (quoted ETag, or `*`).
+      example: '"f1d2d2f924e986ac86fdf7b36c94bcdf32beec15"'
+
+    IfNoneMatch:
+      name: If-None-Match
+      in: header
+      required: false
+      schema:
+        type: string
+      description: ETag precondition header for optimistic concurrency.
+      example: '*'
+
+    StatementId:
+      name: statementId
+      in: query
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: ID of the Statement to write.
+
+    StatementIdOptional:
+      name: statementId
+      in: query
+      required: false
+      schema:
+        type: string
+        format: uuid
+      description: ID of a specific Statement to retrieve.
+
+    VoidedStatementId:
+      name: voidedStatementId
+      in: query
+      required: false
+      schema:
+        type: string
+        format: uuid
+      description: ID of a voided Statement to retrieve.
+
+    AgentQueryOptional:
+      name: agent
+      in: query
+      required: false
+      schema:
+        type: string
+      description: URL-encoded JSON string of an Agent or Identified Group object.
+      example: '{"objectType":"Agent","mbox":"mailto:learner@example.com"}'
+
+    AgentQueryRequired:
+      name: agent
+      in: query
+      required: true
+      schema:
+        type: string
+      description: URL-encoded JSON string of an Agent object (exactly one IFI).
+      example: '{"objectType":"Agent","mbox":"mailto:learner@example.com"}'
+
+    VerbId:
+      name: verb
+      in: query
+      required: false
+      schema:
+        type: string
+        format: uri
+      description: Verb IRI filter.
+
+    ActivityIdOptional:
+      name: activity
+      in: query
+      required: false
+      schema:
+        type: string
+        format: uri
+      description: Activity IRI filter for statements.
+
+    ActivityIdRequired:
+      name: activityId
+      in: query
+      required: true
+      schema:
+        type: string
+        format: uri
+      description: Activity IRI.
+
+    Registration:
+      name: registration
+      in: query
+      required: false
+      schema:
+        type: string
+        format: uuid
+      description: Registration UUID.
+
+    RelatedActivities:
+      name: related_activities
+      in: query
+      required: false
+      schema:
+        type: boolean
+        default: false
+
+    RelatedAgents:
+      name: related_agents
+      in: query
+      required: false
+      schema:
+        type: boolean
+        default: false
+
+    Since:
+      name: since
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date-time
+      description: Filter for content stored after this timestamp (exclusive).
+
+    Until:
+      name: until
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date-time
+
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+
+    Format:
+      name: format
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [ids, exact, canonical]
+        default: exact
+      description: |
+        Response shape selector for Statement GET.
+        - `ids` -> `StatementResponseIds` / `StatementResultIds`
+        - `exact` -> `StatementResponseExact` / `StatementResultExact`
+        - `canonical` -> `StatementResponseCanonical` / `StatementResultCanonical`
+
+    Attachments:
+      name: attachments
+      in: query
+      required: false
+      schema:
+        type: boolean
+        default: false
+
+    Ascending:
+      name: ascending
+      in: query
+      required: false
+      schema:
+        type: boolean
+        default: false
+
+    StateIdOptional:
+      name: stateId
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Required for single-state read/write/delete operations.
+
+    ProfileIdOptional:
+      name: profileId
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Required for single-profile read/write/delete operations.
+
+  responses:
+    BadRequest:
+      description: Bad Request
+      headers:
+        X-Experience-API-Version:
+          $ref: '#/components/headers/XExperienceApiVersion'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Unauthorized
+      headers:
+        X-Experience-API-Version:
+          $ref: '#/components/headers/XExperienceApiVersion'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: Forbidden
+      headers:
+        X-Experience-API-Version:
+          $ref: '#/components/headers/XExperienceApiVersion'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Not Found
+      headers:
+        X-Experience-API-Version:
+          $ref: '#/components/headers/XExperienceApiVersion'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Conflict:
+      description: Conflict
+      headers:
+        X-Experience-API-Version:
+          $ref: '#/components/headers/XExperienceApiVersion'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    PreconditionFailed:
+      description: Precondition Failed
+      headers:
+        X-Experience-API-Version:
+          $ref: '#/components/headers/XExperienceApiVersion'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    RequestTooLarge:
+      description: Request Entity Too Large
+      headers:
+        X-Experience-API-Version:
+          $ref: '#/components/headers/XExperienceApiVersion'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  examples:
+    StatementRequestSimple:
+      summary: PUT statement payload (with matching id)
+      value:
+        id: c70c2b85-c294-464f-baca-cebd4fb9b348
+        actor:
+          objectType: Agent
+          name: Test User
+          mbox: mailto:example@example.com
+        verb:
+          id: http://adlnet.gov/expapi/verbs/experienced
+          display:
+            en-US: experienced
+        object:
+          objectType: Activity
+          id: http://example.com/xAPI/activities/myactivity
+        timestamp: '2014-12-29T12:09:37.468Z'
+        version: '1.0.3'
+
+    StatementRequestSimpleNoId:
+      summary: POST single statement payload
+      value:
+        actor:
+          objectType: Agent
+          mbox: mailto:learner@example.com
+          name: Example Learner
+        verb:
+          id: http://adlnet.gov/expapi/verbs/attempted
+          display:
+            en-US: attempted
+        object:
+          objectType: Activity
+          id: http://example.adlnet.gov/xapi/example/simpleCBT
+          definition:
+            name:
+              en-US: Simple CBT
+            description:
+              en-US: Basic CBT activity
+            type: http://adlnet.gov/expapi/activities/lesson
+        timestamp: '2026-02-12T05:00:00Z'
+
+    StatementRequestBatch:
+      summary: POST batch statements payload
+      value:
+        - actor:
+            objectType: Agent
+            mbox: mailto:learner@example.com
+          verb:
+            id: http://adlnet.gov/expapi/verbs/initialized
+            display:
+              en-US: initialized
+          object:
+            objectType: Activity
+            id: http://example.com/course/lesson-1
+          timestamp: '2026-02-12T05:01:00Z'
+        - actor:
+            objectType: Agent
+            mbox: mailto:learner@example.com
+          verb:
+            id: http://adlnet.gov/expapi/verbs/completed
+            display:
+              en-US: completed
+          object:
+            objectType: Activity
+            id: http://example.com/course/lesson-1
+          result:
+            completion: true
+            success: true
+            score:
+              scaled: 0.95
+          timestamp: '2026-02-12T05:20:00Z'
+
+    StatementIdsResponse:
+      summary: Statement id list returned by POST
+      value:
+        - 38fe0f7b-7d2b-4f2b-87d8-391f1ad0bb44
+        - 37f5f5ec-cdbb-4f6b-92c8-4c48d5ab10bb
+
+    StatementResponseSimple:
+      summary: Single statement returned by GET (format=exact)
+      value:
+        id: c70c2b85-c294-464f-baca-cebd4fb9b348
+        actor:
+          objectType: Agent
+          name: Test User
+          mbox: mailto:example@example.com
+        verb:
+          id: http://adlnet.gov/expapi/verbs/experienced
+          display:
+            en-US: experienced
+            vi-VN: da-trai-nghiem
+        object:
+          objectType: Activity
+          id: http://example.com/xAPI/activities/myactivity
+          definition:
+            name:
+              en-US: Example Activity
+              vi-VN: Hoat dong vi du
+            description:
+              en-US: Activity from exact mode
+              vi-VN: Hoat dong tra ve o che do exact
+            type: http://adlnet.gov/expapi/activities/lesson
+        timestamp: '2014-12-29T12:09:37.468Z'
+        stored: '2014-12-29T12:09:38.102Z'
+        authority:
+          objectType: Agent
+          mbox: mailto:lrs-admin@example.com
+        version: '1.0.3'
+
+    StatementResultPage:
+      summary: Statement result page (format=exact)
+      value:
+        statements:
+          - id: 38fe0f7b-7d2b-4f2b-87d8-391f1ad0bb44
+            actor:
+              objectType: Agent
+              mbox: mailto:learner@example.com
+            verb:
+              id: http://adlnet.gov/expapi/verbs/initialized
+              display:
+                en-US: initialized
+            object:
+              objectType: Activity
+              id: http://example.com/course/lesson-1
+            timestamp: '2026-02-12T05:01:00Z'
+            stored: '2026-02-12T05:01:00Z'
+            authority:
+              objectType: Agent
+              mbox: mailto:lrs-admin@example.com
+            version: '1.0.3'
+          - id: 37f5f5ec-cdbb-4f6b-92c8-4c48d5ab10bb
+            actor:
+              objectType: Agent
+              mbox: mailto:learner@example.com
+            verb:
+              id: http://adlnet.gov/expapi/verbs/completed
+              display:
+                en-US: completed
+            object:
+              objectType: Activity
+              id: http://example.com/course/lesson-1
+            result:
+              completion: true
+              success: true
+              score:
+                scaled: 0.95
+            timestamp: '2026-02-12T05:20:00Z'
+            stored: '2026-02-12T05:20:00Z'
+            authority:
+              objectType: Agent
+              mbox: mailto:lrs-admin@example.com
+            version: '1.0.3'
+        more: /statements?agent=%7B%22mbox%22%3A%22mailto%3Alearner%40example.com%22%7D&until=2026-02-12T05%3A20%3A00Z
+
+    StatementResponseCanonical:
+      summary: Single statement returned by GET (format=canonical)
+      value:
+        id: c70c2b85-c294-464f-baca-cebd4fb9b348
+        actor:
+          objectType: Agent
+          name: Test User
+          mbox: mailto:example@example.com
+        verb:
+          id: http://adlnet.gov/expapi/verbs/experienced
+          display:
+            en-US: experienced
+        object:
+          objectType: Activity
+          id: http://example.com/xAPI/activities/myactivity
+          definition:
+            name:
+              en-US: Example Activity
+            description:
+              en-US: Activity from canonical mode
+            type: http://adlnet.gov/expapi/activities/lesson
+        timestamp: '2014-12-29T12:09:37.468Z'
+        stored: '2014-12-29T12:09:38.102Z'
+        authority:
+          objectType: Agent
+          mbox: mailto:lrs-admin@example.com
+        version: '1.0.3'
+
+    StatementResultPageCanonical:
+      summary: Statement result page (format=canonical)
+      value:
+        statements:
+          - id: 38fe0f7b-7d2b-4f2b-87d8-391f1ad0bb44
+            actor:
+              objectType: Agent
+              mbox: mailto:learner@example.com
+            verb:
+              id: http://adlnet.gov/expapi/verbs/initialized
+              display:
+                en-US: initialized
+            object:
+              objectType: Activity
+              id: http://example.com/course/lesson-1
+              definition:
+                name:
+                  en-US: Lesson 1
+                description:
+                  en-US: Canonical projection
+                type: http://adlnet.gov/expapi/activities/lesson
+            timestamp: '2026-02-12T05:01:00Z'
+            stored: '2026-02-12T05:01:00Z'
+            authority:
+              objectType: Agent
+              mbox: mailto:lrs-admin@example.com
+            version: '1.0.3'
+        more: /statements?format=canonical&until=2026-02-12T05%3A01%3A00Z
+
+    StatementResponseIds:
+      summary: Single statement returned by GET (format=ids)
+      value:
+        id: c70c2b85-c294-464f-baca-cebd4fb9b348
+        actor:
+          objectType: Agent
+          mbox: mailto:example@example.com
+        verb:
+          id: http://adlnet.gov/expapi/verbs/experienced
+        object:
+          objectType: Activity
+          id: http://example.com/xAPI/activities/myactivity
+        timestamp: '2014-12-29T12:09:37.468Z'
+        stored: '2014-12-29T12:09:38.102Z'
+        authority:
+          objectType: Agent
+          mbox: mailto:lrs-admin@example.com
+        version: '1.0.3'
+
+    StatementResultPageIds:
+      summary: Statement result page (format=ids)
+      value:
+        statements:
+          - id: 38fe0f7b-7d2b-4f2b-87d8-391f1ad0bb44
+            actor:
+              objectType: Agent
+              mbox: mailto:learner@example.com
+            verb:
+              id: http://adlnet.gov/expapi/verbs/initialized
+            object:
+              objectType: Activity
+              id: http://example.com/course/lesson-1
+            timestamp: '2026-02-12T05:01:00Z'
+            stored: '2026-02-12T05:01:00Z'
+            authority:
+              objectType: Agent
+              mbox: mailto:lrs-admin@example.com
+            version: '1.0.3'
+        more: /statements?format=ids&until=2026-02-12T05%3A01%3A00Z
+
+    StateDocumentJson:
+      summary: State document content
+      value:
+        bookmark: page-42
+        suspendData:
+          attempt: 2
+          lastQuestion: q10
+          elapsedSeconds: 1234
+
+    StateDocumentPatch:
+      summary: State document merge payload
+      value:
+        suspendData:
+          lastQuestion: q11
+          elapsedSeconds: 1305
+
+    StateIdList:
+      summary: State id list
+      value:
+        - course-state
+        - quiz-progress
+        - video-playback
+
+    ActivityProfileDocument:
+      summary: Activity profile document
+      value:
+        launch:
+          preferredLanguage: vi-VN
+          passingScore: 0.8
+        ui:
+          showHints: true
+
+    ActivityProfilePatch:
+      summary: Activity profile merge payload
+      value:
+        ui:
+          showHints: false
+
+    ActivityProfileIdList:
+      summary: Activity profile id list
+      value:
+        - launch-config
+        - grading-policy
+
+    AgentProfileDocument:
+      summary: Agent profile document
+      value:
+        preferences:
+          timezone: Asia/Ho_Chi_Minh
+          locale: vi-VN
+          accessibility:
+            captions: true
+
+    AgentProfilePatch:
+      summary: Agent profile merge payload
+      value:
+        preferences:
+          locale: en-US
+
+    AgentProfileIdList:
+      summary: Agent profile id list
+      value:
+        - learner-preferences
+        - dashboard-layout
+
+    ActivityObjectResponse:
+      summary: Activity object from /activities
+      value:
+        objectType: Activity
+        id: http://example.com/course/lesson-1
+        definition:
+          name:
+            en-US: Lesson 1 - Introduction
+            vi-VN: Bài 1 - Giới thiệu
+          description:
+            en-US: Intro lesson
+            vi-VN: Bài học nhập môn
+          type: http://adlnet.gov/expapi/activities/lesson
+
+    PersonResponse:
+      summary: Person object from /agents
+      value:
+        objectType: Person
+        name:
+          - Example Learner
+        mbox:
+          - mailto:learner@example.com
+        account:
+          - homePage: http://example.com
+            name: learner-001
+
+    AboutResponse:
+      summary: About response
+      value:
+        version:
+          - '1.0.3'
+        extensions:
+          https://example.com/xapi/extensions/lrs-name: Demo LRS
+          https://example.com/xapi/extensions/region: ap-southeast-1
+
+  schemas:
+    IriString:
+      type: string
+      format: uri
+      description: Absolute IRI/IRL value.
+
+    VersionString:
+      type: string
+      pattern: '^1\\.0\\.\\d+$'
+
+    LanguageMap:
+      type: object
+      description: Language map keyed by language tags.
+      minProperties: 1
+      propertyNames:
+        pattern: '^[a-zA-Z]{1,8}(-[a-zA-Z0-9]{1,8})*$'
+      additionalProperties:
+        type: string
+
+    LanguageMapCanonical:
+      allOf:
+        - $ref: '#/components/schemas/LanguageMap'
+        - type: object
+          maxProperties: 1
+
+    Extensions:
+      type: object
+      description: Extension object keyed by IRI.
+      additionalProperties: true
+      propertyNames:
+        format: uri
+
+    Account:
+      type: object
+      required: [homePage, name]
+      properties:
+        homePage:
+          $ref: '#/components/schemas/IriString'
+        name:
+          type: string
+      additionalProperties: false
+
+    Agent:
+      type: object
+      description: xAPI Agent object with exactly one inverse functional identifier.
+      properties:
+        objectType:
+          type: string
+          const: Agent
+        name:
+          type: string
+        mbox:
+          type: string
+          pattern: '^mailto:.+'
+        mbox_sha1sum:
+          type: string
+          pattern: '^[0-9a-fA-F]{40}$'
+        openid:
+          $ref: '#/components/schemas/IriString'
+        account:
+          $ref: '#/components/schemas/Account'
+      additionalProperties: false
+      oneOf:
+        - required: [mbox]
+        - required: [mbox_sha1sum]
+        - required: [openid]
+        - required: [account]
+
+    Group:
+      type: object
+      description: xAPI Group object (identified or anonymous).
+      required: [objectType]
+      properties:
+        objectType:
+          type: string
+          const: Group
+        name:
+          type: string
+        mbox:
+          type: string
+          pattern: '^mailto:.+'
+        mbox_sha1sum:
+          type: string
+          pattern: '^[0-9a-fA-F]{40}$'
+        openid:
+          $ref: '#/components/schemas/IriString'
+        account:
+          $ref: '#/components/schemas/Account'
+        member:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/Agent'
+      additionalProperties: false
+      anyOf:
+        - allOf:
+            - required: [member]
+            - not:
+                anyOf:
+                  - required: [mbox]
+                  - required: [mbox_sha1sum]
+                  - required: [openid]
+                  - required: [account]
+        - required: [mbox]
+        - required: [mbox_sha1sum]
+        - required: [openid]
+        - required: [account]
+
+    Actor:
+      oneOf:
+        - $ref: '#/components/schemas/Agent'
+        - $ref: '#/components/schemas/Group'
+
+    AgentIds:
+      type: object
+      description: Minimal Agent representation for `format=ids`.
+      properties:
+        objectType:
+          type: string
+          const: Agent
+        mbox:
+          type: string
+          pattern: '^mailto:.+'
+        mbox_sha1sum:
+          type: string
+          pattern: '^[0-9a-fA-F]{40}$'
+        openid:
+          $ref: '#/components/schemas/IriString'
+        account:
+          $ref: '#/components/schemas/Account'
+      additionalProperties: false
+      oneOf:
+        - required: [mbox]
+        - required: [mbox_sha1sum]
+        - required: [openid]
+        - required: [account]
+
+    GroupIds:
+      type: object
+      description: Minimal Group representation for `format=ids`.
+      required: [objectType]
+      properties:
+        objectType:
+          type: string
+          const: Group
+        mbox:
+          type: string
+          pattern: '^mailto:.+'
+        mbox_sha1sum:
+          type: string
+          pattern: '^[0-9a-fA-F]{40}$'
+        openid:
+          $ref: '#/components/schemas/IriString'
+        account:
+          $ref: '#/components/schemas/Account'
+        member:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/AgentIds'
+      additionalProperties: false
+      anyOf:
+        - allOf:
+            - required: [member]
+            - not:
+                anyOf:
+                  - required: [mbox]
+                  - required: [mbox_sha1sum]
+                  - required: [openid]
+                  - required: [account]
+        - required: [mbox]
+        - required: [mbox_sha1sum]
+        - required: [openid]
+        - required: [account]
+
+    ActorIds:
+      oneOf:
+        - $ref: '#/components/schemas/AgentIds'
+        - $ref: '#/components/schemas/GroupIds'
+
+    Verb:
+      type: object
+      required: [id]
+      properties:
+        id:
+          $ref: '#/components/schemas/IriString'
+        display:
+          $ref: '#/components/schemas/LanguageMap'
+      additionalProperties: false
+
+    VerbIds:
+      type: object
+      required: [id]
+      properties:
+        id:
+          $ref: '#/components/schemas/IriString'
+      additionalProperties: false
+
+    VerbCanonical:
+      type: object
+      required: [id]
+      properties:
+        id:
+          $ref: '#/components/schemas/IriString'
+        display:
+          $ref: '#/components/schemas/LanguageMapCanonical'
+      additionalProperties: false
+
+    InteractionComponent:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+        description:
+          $ref: '#/components/schemas/LanguageMap'
+      additionalProperties: false
+
+    InteractionComponentCanonical:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+        description:
+          $ref: '#/components/schemas/LanguageMapCanonical'
+      additionalProperties: false
+
+    ActivityDefinition:
+      type: object
+      properties:
+        name:
+          $ref: '#/components/schemas/LanguageMap'
+        description:
+          $ref: '#/components/schemas/LanguageMap'
+        type:
+          $ref: '#/components/schemas/IriString'
+        moreInfo:
+          $ref: '#/components/schemas/IriString'
+        interactionType:
+          type: string
+          enum:
+            - true-false
+            - choice
+            - fill-in
+            - long-fill-in
+            - matching
+            - performance
+            - sequencing
+            - likert
+            - numeric
+            - other
+        correctResponsesPattern:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        choices:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/InteractionComponent'
+        scale:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/InteractionComponent'
+        source:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/InteractionComponent'
+        target:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/InteractionComponent'
+        steps:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/InteractionComponent'
+        extensions:
+          $ref: '#/components/schemas/Extensions'
+      additionalProperties: false
+      allOf:
+        - if:
+            required: [interactionType]
+          then:
+            required: [correctResponsesPattern]
+        - if:
+            properties:
+              interactionType:
+                enum: [choice, sequencing]
+            required: [interactionType]
+          then:
+            required: [choices]
+        - if:
+            properties:
+              interactionType:
+                const: likert
+            required: [interactionType]
+          then:
+            required: [scale]
+        - if:
+            properties:
+              interactionType:
+                const: matching
+            required: [interactionType]
+          then:
+            required: [source, target]
+        - if:
+            properties:
+              interactionType:
+                const: performance
+            required: [interactionType]
+          then:
+            required: [steps]
+
+    ActivityDefinitionCanonical:
+      type: object
+      properties:
+        name:
+          $ref: '#/components/schemas/LanguageMapCanonical'
+        description:
+          $ref: '#/components/schemas/LanguageMapCanonical'
+        type:
+          $ref: '#/components/schemas/IriString'
+        moreInfo:
+          $ref: '#/components/schemas/IriString'
+        interactionType:
+          type: string
+          enum:
+            - true-false
+            - choice
+            - fill-in
+            - long-fill-in
+            - matching
+            - performance
+            - sequencing
+            - likert
+            - numeric
+            - other
+        correctResponsesPattern:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        choices:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/InteractionComponentCanonical'
+        scale:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/InteractionComponentCanonical'
+        source:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/InteractionComponentCanonical'
+        target:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/InteractionComponentCanonical'
+        steps:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/InteractionComponentCanonical'
+        extensions:
+          $ref: '#/components/schemas/Extensions'
+      additionalProperties: false
+      allOf:
+        - if:
+            required: [interactionType]
+          then:
+            required: [correctResponsesPattern]
+        - if:
+            properties:
+              interactionType:
+                enum: [choice, sequencing]
+            required: [interactionType]
+          then:
+            required: [choices]
+        - if:
+            properties:
+              interactionType:
+                const: likert
+            required: [interactionType]
+          then:
+            required: [scale]
+        - if:
+            properties:
+              interactionType:
+                const: matching
+            required: [interactionType]
+          then:
+            required: [source, target]
+        - if:
+            properties:
+              interactionType:
+                const: performance
+            required: [interactionType]
+          then:
+            required: [steps]
+
+    Activity:
+      type: object
+      required: [id]
+      properties:
+        id:
+          $ref: '#/components/schemas/IriString'
+        objectType:
+          type: string
+          const: Activity
+        definition:
+          $ref: '#/components/schemas/ActivityDefinition'
+      additionalProperties: false
+
+    ActivityIds:
+      type: object
+      required: [id]
+      properties:
+        id:
+          $ref: '#/components/schemas/IriString'
+        objectType:
+          type: string
+          const: Activity
+      additionalProperties: false
+
+    ActivityCanonical:
+      type: object
+      required: [id]
+      properties:
+        id:
+          $ref: '#/components/schemas/IriString'
+        objectType:
+          type: string
+          const: Activity
+        definition:
+          $ref: '#/components/schemas/ActivityDefinitionCanonical'
+      additionalProperties: false
+
+    StatementRef:
+      type: object
+      required: [objectType, id]
+      properties:
+        objectType:
+          type: string
+          const: StatementRef
+        id:
+          type: string
+          format: uuid
+      additionalProperties: false
+
+    SubStatementObject:
+      description: Valid SubStatement object target. Nested SubStatement is not allowed.
+      oneOf:
+        - $ref: '#/components/schemas/Activity'
+        - $ref: '#/components/schemas/Agent'
+        - $ref: '#/components/schemas/Group'
+        - $ref: '#/components/schemas/StatementRef'
+
+    SubStatementObjectCanonical:
+      description: Valid SubStatement object target for `format=canonical`.
+      oneOf:
+        - $ref: '#/components/schemas/ActivityCanonical'
+        - $ref: '#/components/schemas/Agent'
+        - $ref: '#/components/schemas/Group'
+        - $ref: '#/components/schemas/StatementRef'
+
+    SubStatementObjectIds:
+      description: Valid SubStatement object target for `format=ids`.
+      oneOf:
+        - $ref: '#/components/schemas/ActivityIds'
+        - $ref: '#/components/schemas/AgentIds'
+        - $ref: '#/components/schemas/GroupIds'
+        - $ref: '#/components/schemas/StatementRef'
+
+    Score:
+      type: object
+      properties:
+        scaled:
+          type: number
+          minimum: -1
+          maximum: 1
+        raw:
+          type: number
+        min:
+          type: number
+        max:
+          type: number
+      additionalProperties: false
+
+    Result:
+      type: object
+      properties:
+        score:
+          $ref: '#/components/schemas/Score'
+        success:
+          type: boolean
+        completion:
+          type: boolean
+        response:
+          type: string
+        duration:
+          type: string
+          pattern: '^P(?!$).+'
+        extensions:
+          $ref: '#/components/schemas/Extensions'
+      additionalProperties: false
+
+    ActivityOrActivityList:
+      oneOf:
+        - $ref: '#/components/schemas/Activity'
+        - type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/Activity'
+
+    ActivityOrActivityListCanonical:
+      oneOf:
+        - $ref: '#/components/schemas/ActivityCanonical'
+        - type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ActivityCanonical'
+
+    ActivityOrActivityListIds:
+      oneOf:
+        - $ref: '#/components/schemas/ActivityIds'
+        - type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ActivityIds'
+
+    ContextActivities:
+      type: object
+      properties:
+        parent:
+          $ref: '#/components/schemas/ActivityOrActivityList'
+        grouping:
+          $ref: '#/components/schemas/ActivityOrActivityList'
+        category:
+          $ref: '#/components/schemas/ActivityOrActivityList'
+        other:
+          $ref: '#/components/schemas/ActivityOrActivityList'
+      additionalProperties: false
+
+    ContextActivitiesCanonical:
+      type: object
+      properties:
+        parent:
+          $ref: '#/components/schemas/ActivityOrActivityListCanonical'
+        grouping:
+          $ref: '#/components/schemas/ActivityOrActivityListCanonical'
+        category:
+          $ref: '#/components/schemas/ActivityOrActivityListCanonical'
+        other:
+          $ref: '#/components/schemas/ActivityOrActivityListCanonical'
+      additionalProperties: false
+
+    ContextActivitiesIds:
+      type: object
+      properties:
+        parent:
+          $ref: '#/components/schemas/ActivityOrActivityListIds'
+        grouping:
+          $ref: '#/components/schemas/ActivityOrActivityListIds'
+        category:
+          $ref: '#/components/schemas/ActivityOrActivityListIds'
+        other:
+          $ref: '#/components/schemas/ActivityOrActivityListIds'
+      additionalProperties: false
+
+    Context:
+      type: object
+      properties:
+        registration:
+          type: string
+          format: uuid
+        instructor:
+          $ref: '#/components/schemas/Actor'
+        team:
+          $ref: '#/components/schemas/Group'
+        contextActivities:
+          $ref: '#/components/schemas/ContextActivities'
+        revision:
+          type: string
+        platform:
+          type: string
+        language:
+          type: string
+          pattern: '^[a-zA-Z]{1,8}(-[a-zA-Z0-9]{1,8})*$'
+        statement:
+          $ref: '#/components/schemas/StatementRef'
+        extensions:
+          $ref: '#/components/schemas/Extensions'
+      additionalProperties: false
+
+    ContextCanonical:
+      type: object
+      properties:
+        registration:
+          type: string
+          format: uuid
+        instructor:
+          $ref: '#/components/schemas/Actor'
+        team:
+          $ref: '#/components/schemas/Group'
+        contextActivities:
+          $ref: '#/components/schemas/ContextActivitiesCanonical'
+        revision:
+          type: string
+        platform:
+          type: string
+        language:
+          type: string
+          pattern: '^[a-zA-Z]{1,8}(-[a-zA-Z0-9]{1,8})*$'
+        statement:
+          $ref: '#/components/schemas/StatementRef'
+        extensions:
+          $ref: '#/components/schemas/Extensions'
+      additionalProperties: false
+
+    ContextIds:
+      type: object
+      properties:
+        registration:
+          type: string
+          format: uuid
+        instructor:
+          $ref: '#/components/schemas/ActorIds'
+        team:
+          $ref: '#/components/schemas/GroupIds'
+        contextActivities:
+          $ref: '#/components/schemas/ContextActivitiesIds'
+        revision:
+          type: string
+        platform:
+          type: string
+        language:
+          type: string
+          pattern: '^[a-zA-Z]{1,8}(-[a-zA-Z0-9]{1,8})*$'
+        statement:
+          $ref: '#/components/schemas/StatementRef'
+        extensions:
+          $ref: '#/components/schemas/Extensions'
+      additionalProperties: false
+
+    Attachment:
+      type: object
+      required: [usageType, display, contentType, length, sha2]
+      properties:
+        usageType:
+          $ref: '#/components/schemas/IriString'
+        display:
+          $ref: '#/components/schemas/LanguageMap'
+        description:
+          $ref: '#/components/schemas/LanguageMap'
+        contentType:
+          type: string
+        length:
+          type: integer
+          minimum: 0
+        sha2:
+          type: string
+          pattern: '^[0-9a-fA-F]{64}$'
+        fileUrl:
+          $ref: '#/components/schemas/IriString'
+      additionalProperties: false
+
+    SubStatement:
+      type: object
+      required: [objectType, actor, verb, object]
+      properties:
+        objectType:
+          type: string
+          const: SubStatement
+        actor:
+          $ref: '#/components/schemas/Actor'
+        verb:
+          $ref: '#/components/schemas/Verb'
+        object:
+          $ref: '#/components/schemas/SubStatementObject'
+        result:
+          $ref: '#/components/schemas/Result'
+        context:
+          $ref: '#/components/schemas/Context'
+        timestamp:
+          type: string
+          format: date-time
+      additionalProperties: false
+
+    SubStatementCanonical:
+      type: object
+      required: [objectType, actor, verb, object]
+      properties:
+        objectType:
+          type: string
+          const: SubStatement
+        actor:
+          $ref: '#/components/schemas/Actor'
+        verb:
+          $ref: '#/components/schemas/VerbCanonical'
+        object:
+          $ref: '#/components/schemas/SubStatementObjectCanonical'
+        result:
+          $ref: '#/components/schemas/Result'
+        context:
+          $ref: '#/components/schemas/ContextCanonical'
+        timestamp:
+          type: string
+          format: date-time
+      additionalProperties: false
+
+    SubStatementIds:
+      type: object
+      required: [objectType, actor, verb, object]
+      properties:
+        objectType:
+          type: string
+          const: SubStatement
+        actor:
+          $ref: '#/components/schemas/ActorIds'
+        verb:
+          $ref: '#/components/schemas/VerbIds'
+        object:
+          $ref: '#/components/schemas/SubStatementObjectIds'
+        result:
+          $ref: '#/components/schemas/Result'
+        context:
+          $ref: '#/components/schemas/ContextIds'
+        timestamp:
+          type: string
+          format: date-time
+      additionalProperties: false
+
+    StatementObject:
+      oneOf:
+        - $ref: '#/components/schemas/Activity'
+        - $ref: '#/components/schemas/Agent'
+        - $ref: '#/components/schemas/Group'
+        - $ref: '#/components/schemas/StatementRef'
+        - $ref: '#/components/schemas/SubStatement'
+
+    StatementObjectCanonical:
+      oneOf:
+        - $ref: '#/components/schemas/ActivityCanonical'
+        - $ref: '#/components/schemas/Agent'
+        - $ref: '#/components/schemas/Group'
+        - $ref: '#/components/schemas/StatementRef'
+        - $ref: '#/components/schemas/SubStatementCanonical'
+
+    StatementObjectIds:
+      oneOf:
+        - $ref: '#/components/schemas/ActivityIds'
+        - $ref: '#/components/schemas/AgentIds'
+        - $ref: '#/components/schemas/GroupIds'
+        - $ref: '#/components/schemas/StatementRef'
+        - $ref: '#/components/schemas/SubStatementIds'
+
+    StatementRequest:
+      type: object
+      description: |
+        Normative write-shape for a Statement sent by a client.
+        LRS-managed fields like `stored` are intentionally excluded.
+      required: [actor, verb, object]
+      properties:
+        id:
+          type: string
+          format: uuid
+        actor:
+          $ref: '#/components/schemas/Actor'
+        verb:
+          $ref: '#/components/schemas/Verb'
+        object:
+          $ref: '#/components/schemas/StatementObject'
+        result:
+          $ref: '#/components/schemas/Result'
+        context:
+          $ref: '#/components/schemas/Context'
+        timestamp:
+          type: string
+          format: date-time
+        authority:
+          $ref: '#/components/schemas/Actor'
+        version:
+          $ref: '#/components/schemas/VersionString'
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attachment'
+      additionalProperties: false
+
+    StatementResponseExact:
+      type: object
+      description: Statement response shape for `format=exact`.
+      required: [id, actor, verb, object, timestamp, stored, authority, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        actor:
+          $ref: '#/components/schemas/Actor'
+        verb:
+          $ref: '#/components/schemas/Verb'
+        object:
+          $ref: '#/components/schemas/StatementObject'
+        result:
+          $ref: '#/components/schemas/Result'
+        context:
+          $ref: '#/components/schemas/Context'
+        timestamp:
+          type: string
+          format: date-time
+        stored:
+          type: string
+          format: date-time
+        authority:
+          $ref: '#/components/schemas/Actor'
+        version:
+          $ref: '#/components/schemas/VersionString'
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attachment'
+      additionalProperties: false
+
+    StatementResponseCanonical:
+      type: object
+      description: Statement response shape for `format=canonical`.
+      required: [id, actor, verb, object, timestamp, stored, authority, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        actor:
+          $ref: '#/components/schemas/Actor'
+        verb:
+          $ref: '#/components/schemas/VerbCanonical'
+        object:
+          $ref: '#/components/schemas/StatementObjectCanonical'
+        result:
+          $ref: '#/components/schemas/Result'
+        context:
+          $ref: '#/components/schemas/ContextCanonical'
+        timestamp:
+          type: string
+          format: date-time
+        stored:
+          type: string
+          format: date-time
+        authority:
+          $ref: '#/components/schemas/Actor'
+        version:
+          $ref: '#/components/schemas/VersionString'
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attachment'
+      additionalProperties: false
+
+    StatementResponseIds:
+      type: object
+      description: Statement response shape for `format=ids`.
+      required: [id, actor, verb, object, timestamp, stored, authority, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        actor:
+          $ref: '#/components/schemas/ActorIds'
+        verb:
+          $ref: '#/components/schemas/VerbIds'
+        object:
+          $ref: '#/components/schemas/StatementObjectIds'
+        result:
+          $ref: '#/components/schemas/Result'
+        context:
+          $ref: '#/components/schemas/ContextIds'
+        timestamp:
+          type: string
+          format: date-time
+        stored:
+          type: string
+          format: date-time
+        authority:
+          $ref: '#/components/schemas/ActorIds'
+        version:
+          $ref: '#/components/schemas/VersionString'
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attachment'
+      additionalProperties: false
+
+    StatementResponse:
+      deprecated: true
+      allOf:
+        - $ref: '#/components/schemas/StatementResponseExact'
+
+    StatementResultExact:
+      type: object
+      required: [statements]
+      properties:
+        statements:
+          type: array
+          items:
+            $ref: '#/components/schemas/StatementResponseExact'
+        more:
+          type: string
+          description: Relative IRI to fetch additional results.
+      additionalProperties: false
+
+    StatementResultCanonical:
+      type: object
+      required: [statements]
+      properties:
+        statements:
+          type: array
+          items:
+            $ref: '#/components/schemas/StatementResponseCanonical'
+        more:
+          type: string
+          description: Relative IRI to fetch additional results.
+      additionalProperties: false
+
+    StatementResultIds:
+      type: object
+      required: [statements]
+      properties:
+        statements:
+          type: array
+          items:
+            $ref: '#/components/schemas/StatementResponseIds'
+        more:
+          type: string
+          description: Relative IRI to fetch additional results.
+      additionalProperties: false
+
+    StatementResult:
+      deprecated: true
+      allOf:
+        - $ref: '#/components/schemas/StatementResultExact'
+
+    Person:
+      type: object
+      required: [objectType, name]
+      properties:
+        objectType:
+          type: string
+          const: Person
+        name:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        mbox:
+          type: array
+          items:
+            type: string
+            pattern: '^mailto:.+'
+        mbox_sha1sum:
+          type: array
+          items:
+            type: string
+            pattern: '^[0-9a-fA-F]{40}$'
+        openid:
+          type: array
+          items:
+            $ref: '#/components/schemas/IriString'
+        account:
+          type: array
+          items:
+            $ref: '#/components/schemas/Account'
+      additionalProperties: false
+
+    About:
+      type: object
+      required: [version]
+      properties:
+        version:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            pattern: '^[0-9]+\\.[0-9]+(\\.[0-9]+)?$'
+        extensions:
+          $ref: '#/components/schemas/Extensions'
+        Extensions:
+          $ref: '#/components/schemas/Extensions'
+      additionalProperties: false
+
+    IdList:
+      type: array
+      items:
+        type: string
+      uniqueItems: true
+
+    DocumentContent:
+      description: Arbitrary document content managed by Document APIs.
+      oneOf:
+        - type: object
+          additionalProperties: true
+        - type: array
+          items: {}
+        - type: string
+        - type: number
+        - type: boolean
+        - type: 'null'
+
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+        code:
+          type: string
+      additionalProperties: true
