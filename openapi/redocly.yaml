@@ -1,0 +1,7 @@
+extends:
+  - recommended
+
+theme:
+  openapi:
+    # Show the interactive "Try it" panel in Redocly Reference docs.
+    hideReplay: false

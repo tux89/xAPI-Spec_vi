@@ -55,6 +55,24 @@ bun run preview
 - File build ra tại: `openapi/dist/index.html`
 - Preview mặc định chạy tại cổng `8080`.
 
+## Bật Try it (Replay)
+
+Project đã thêm `openapi/redocly.yaml` với cấu hình:
+
+- `theme.openapi.hideReplay: false` để hiển thị panel `Try it` trong Redocly docs.
+- `extends: recommended` để giữ bộ rule lint mặc định của Redocly CLI.
+
+Lưu ý:
+
+- Nếu CLI báo `Using Redoc community edition`, tính năng `Replay/Try it` có thể không hiển thị.
+- Khi đó cần `redocly login` hoặc dùng enterprise license key của Redocly để preview bản docs premium.
+
+Để test request trực tiếp trên trình duyệt:
+
+1. Chỉnh `servers` trong `openapi/openapi.yaml` sang URL LRS thật (hoặc local) của bạn.
+2. Đảm bảo LRS cho phép CORS từ domain docs (hoặc chạy docs cùng origin).
+3. Chạy `pnpm preview` (hoặc `bun run preview`) và mở docs để dùng `Try it`.
+
 ## File chính
 
 - `openapi/openapi.yaml`: OpenAPI spec.
