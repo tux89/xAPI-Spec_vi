@@ -900,7 +900,7 @@ components:
       description: xAPI version header.
       schema:
         type: string
-        pattern: '^1\\.0\\.\\d+$'
+        pattern: '^1\.0\.\d+$'
       example: '1.0.3'
 
   parameters:
@@ -911,7 +911,7 @@ components:
       description: xAPI version header required by section 6.2
       schema:
         type: string
-        pattern: '^1\\.0\\.\\d+$'
+        pattern: '^1\.0\.\d+$'
       example: '1.0.3'
 
     AcceptLanguage:

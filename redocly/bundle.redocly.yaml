@@ -1,13 +1,7 @@
 # Redocly configuration for bundling OpenAPI spec
 # This config is used when running: redocly bundle openapi.yaml --output dist/bundled.yaml
+# Note: bundling options like --dereference and --remove-unused-components
+# should be passed as CLI flags, not in this config file.
 
 extends:
   - recommended
-
-# Remove or dereference $refs during bundling
-bundle:
-  dereference: true
-  removeUnusedComponents: true
-
-# Output formatting for bundled file
-formatter: codeframe
