@@ -4,10 +4,21 @@
   "version": "0.1.0",
   "description": "OpenAPI project for generating docs from the xAPI Vietnamese specification",
   "packageManager": "pnpm@10.29.2",
+  "type": "module",
   "scripts": {
+    "prebuild": "node scripts/prebuild.js",
     "lint": "redocly lint openapi.yaml",
-    "build": "redocly build-docs openapi.yaml -o dist/index.html",
-    "dev": "redocly preview-docs openapi.yaml --host 0.0.0.0 --port 8080"
+    "bundle": "redocly bundle --config bundle.redocly.yaml openapi.yaml --output dist/bundled.yaml",
+    "build:redoc": "redocly build-docs openapi.yaml -o dist/redoc/index.html",
+    "build": "pnpm run prebuild && pnpm run bundle && pnpm run build:redoc",
+    "dev": "redocly preview-docs openapi.yaml --host 0.0.0.0 --port 8080",
+    "start": "node src/server.js",
+    "dev:server": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "js-yaml": "^4.1.0",
+    "swagger-ui-express": "^5.0.0"
   },
   "devDependencies": {
     "@redocly/cli": "^1.34.5"
